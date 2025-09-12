@@ -1,35 +1,49 @@
+// GameScene.mjs
 import { Container } from 'pixi-7.4.2';
-import { OrbitControls } from 'three-161/examples/jsm/controls/OrbitControls.js';
 import {
-    AmbientLight,
-    AxesHelper,
+    Group,
+    OrthographicCamera,
     Color,
+    AmbientLight,
     DirectionalLight,
-    Mesh,
     MeshPhongMaterial,
-    SphereGeometry,
-    Vector3,
+    MeshBasicMaterial,
 } from 'three-161';
 
 import { Background } from '../objects/Background.mjs';
+import Hero from '../objects/Hero.mjs';
+import PlayerJoystickController from '../ui/PlayerJoystickController.mjs';
+import Walls from '../objects/Walls.mjs';
+import { RATIO_NAMES } from '../modules/managers/ResizeManager.mjs';
+import OrthoCameraRig from '../ui/OrthoCameraRig.mjs';
 
 export default class GameScene {
+    display;
+    worldRoot;
+
+    background;
+    hero;
+
+    playerJoystick;
 
     constructor() {
-
         this.display = new Container();
-
         app.three.scene.background = new Color(app.data.COLORS.background);
 
-        this.initCamera();
-        // this.initOrbitControls();
-        // this.initAxisHelper();
         this.initLights();
         this.initMaterials();
+
+        this.worldRoot = new Group();
+        this.worldRoot.name = 'WorldRoot';
+        app.three.scene.add(this.worldRoot);
+
         this.init3DObjects();
         this.init2DObjects();
         this.initFXhelpers();
         this.initCharacters();
+
+        this.initOrthoCamera();
+        this.initJoystickController();
 
         app.resize.add(this.onResize);
         app.loop.add(this.onUpdate);
@@ -38,49 +52,30 @@ export default class GameScene {
         this.onUpdate();
     }
 
+    /*──────────────── CAMERA (fixed ortho) ────────────────*/
+    initOrthoCamera() {
+        this.orthoCameraRig = new OrthoCameraRig({
+            worldRoot: this.worldRoot,
+            getTarget: () => this.hero?.model,
+        });
 
-    initCamera() {
-        this.camera = app.three.camera;
-        this.camera.userData.lookAtY = 0;
-        this.updateCameraToGamePos();
+        this.orthoCameraRig.setFollowAxes({ x: false, y: false, z: true });
+        this.orthoCameraRig.lockAxisX(true);
+        this.orthoCameraRig.lockAxisY(true);
+        this.orthoCameraRig.lockAxisZ(false);
+
+        this.orthoCameraRig.setAnchorZ(7.5);        // world offset 
+        this.orthoCameraRig.setClamp('z', 0.0, 4.5); // clamp to fit the textures
+        this.orthoCameraRig.setLerp({ z: 0 });       // 0 = instant
     }
 
-    getCameraGamePosition() {
-        let offsetY = this.ball ? -this.ball.currentLevel * this.ball.drumStep : 0;
-        let baseY = 4 + offsetY;
-
-        return app.isPortrait
-            ? new Vector3(0, baseY, 10)              // portrait
-            : new Vector3(0, baseY - 1, 7);          // landscape
-    }
-
-    updateCameraToGamePos() {
-        let position = this.getCameraGamePosition();
-        this.camera.position.copy(position);
-        this.camera.lookAt(0, 0, 0);
-    }
-
-    initOrbitControls() {
-        this.controls = new OrbitControls(app.three.camera, app.pixi.app.view);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.1;
-        this.controls.update();
-    }
-
-    initAxisHelper() {
-        this.axisHelper = new AxesHelper(20)
-        this.axisHelper.position.set(0, 0, 0);
-        this.axisHelper.visible = true;
-        app.three.scene.add(this.axisHelper);
-    }
-
+    /*──────────────── LIGHTS / MATERIALS / OBJECTS ───────*/
     initLights() {
-
         let lightAmbient = new AmbientLight(0xffffff, 1.2);
         app.three.scene.add(lightAmbient);
 
         let lightDirectional = new DirectionalLight(0xffffff, 3.1);
-        lightDirectional.position.set(-10, 15, 10);
+        lightDirectional.position.set(-10, 15, -10);
         lightDirectional.castShadow = true;
 
         lightDirectional.shadow.camera.left = -14;
@@ -91,71 +86,108 @@ export default class GameScene {
         lightDirectional.shadow.mapSize.width = 1024;
         lightDirectional.shadow.mapSize.height = 1024;
 
-        let sphereMaterial = new MeshPhongMaterial({
-            color: 0xffffff,
-            emissive: 0xffffff,
-            emissiveIntensity: 100,
-            transparent: true,
-            opacity: 0.8,
-        });
-
-        let lightSphere = new Mesh(new SphereGeometry(0.3, 32, 32), sphereMaterial);
-        lightDirectional.add(lightSphere);
-
-        let glowSprite = app.three.sprite('spark', { scale: 0.05, depthWrite: false, });
-        lightDirectional.add(glowSprite);
-
         app.three.scene.add(lightDirectional);
-
-
     }
 
     initMaterials() {
-        // true - false = flipY 
         app.three.materials = {
-            floor : new MeshPhongMaterial({ map: app.three.getMap('wood', true) }),
+            floor: new MeshPhongMaterial({ map: app.three.getMap('wood', true) }),
+            jane: new MeshBasicMaterial({ map: app.three.getMap('janeTexture') }),
         };
     }
 
     init3DObjects() {
         this.background = new Background('background');
-        this.background.backgroundMesh.position.set(0, -8, -10);
-        this.background.backgroundMesh.rotateX(-0.2);
-        app.three.scene.add(this.background.backgroundMesh);
+        this.background.backgroundMesh.position.set(0, 0, 0);
+        this.background.backgroundMesh.rotateX(-Math.PI / 2);
+        this.worldRoot.add(this.background.backgroundMesh);
+
+        // Borders:
+        let bounds = {
+            minX: -5.5,  // left border
+            maxX: 5.5,   // right border
+            minZ: -8.0,  // top border
+            maxZ: 12.3,  // bottom border
+        };
+
+        this.walls = new Walls(this.worldRoot, {
+            bounds,
+            show: true,
+            color: 0xff8800,
+            alpha: 0.25
+        });
+
+        this.walls.setVisible(false);
     }
 
-    init2DObjects() {
+    init2DObjects() { }
 
-    }
+    initFXhelpers() { }
 
     initCharacters() {
+        this.hero = new Hero();
 
+        this.hero.setPosition(0, 0, 6)
+        this.worldRoot.add(this.hero.model);
     }
 
-    initFXhelpers() {
-
+    /*──────────────── CONTROLS ───────────────────────────*/
+    initJoystickController() {
+        this.playerJoystick = new PlayerJoystickController(this.hero, app.three.camera, true, 'home');
+        this.display.addChild(this.playerJoystick.display);
     }
 
+    /*──────────────── RESIZE / UPDATE / DESTROY ──────────*/
     onResize = () => {
 
-        if (app.isPortrait) {
-            this.background.backgroundMesh.position.set(0, -8, -8);
-            this.background.backgroundMesh.scale.set(1, 1, 1);
-        } else {
-            this.background.backgroundMesh.position.set(0, -8, -7);
-            this.background.backgroundMesh.scale.set(2, 2, 2);
-        }
 
-        this.updateCameraToGamePos();
+        this.background.backgroundMesh.position.set(0, 0, 0);
+        this.background.backgroundMesh.scale.set(1, 1, 1);
+
+        let mode = app.resize.ratioLess('SM')
+            ? 'TABLET'
+            : (app.resize.ratioName === RATIO_NAMES.XLG ? 'TALL' : 'DEFAULT');
+
+        switch (mode) {
+            case 'TABLET': {
+                // 4:3, 16:10, etc.
+                this.orthoCameraRig.setZoom(52)
+                this.orthoCameraRig.setClamp('z', -1, 3.5);
+                this.orthoCameraRig.setAnchorZ(4.5);
+                this.playerJoystick.display.scale.set(0.7)
+                break;
+            }
+
+            case 'TALL': {
+                // Very tall phones (e.g., iPhone 12/14 Pro Max)
+                this.orthoCameraRig.setZoom(55)
+                this.orthoCameraRig.setAnchorZ(7.5);
+                this.orthoCameraRig.setClamp('z', 0, 4.5);
+
+                this.playerJoystick.display.scale.set(0.9)
+
+                break;
+            }
+
+            default: {
+                // Default phones / desktop
+
+                this.orthoCameraRig.setZoom(53)
+                this.orthoCameraRig.setAnchorZ(8);
+                this.orthoCameraRig.setClamp('z', 0, 5);
+                this.playerJoystick.display.scale.set(0.9)
+
+                break;
+            }
+        }
     };
 
     onUpdate = () => {
-        this.camera.lookAt(0, 0, 0)
+
     };
 
     destroy() {
         app.resize.remove(this.onResize);
         app.loop.remove(this.onUpdate);
-        this.controls?.dispose?.();
     }
 }
