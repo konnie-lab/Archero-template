@@ -2,12 +2,12 @@
 import { Container } from 'pixi-7.4.2';
 import {
     Group,
-    OrthographicCamera,
     Color,
     AmbientLight,
     DirectionalLight,
     MeshPhongMaterial,
     MeshBasicMaterial,
+    MeshLambertMaterial,
 } from 'three-161';
 
 import { Background } from '../objects/Background.mjs';
@@ -16,6 +16,8 @@ import PlayerJoystickController from '../ui/PlayerJoystickController.mjs';
 import Walls from '../objects/Walls.mjs';
 import { RATIO_NAMES } from '../modules/managers/ResizeManager.mjs';
 import OrthoCameraRig from '../ui/OrthoCameraRig.mjs';
+import { OrbitControls } from 'three-161/examples/jsm/controls/OrbitControls.js';
+import DamageNumbersFX from '../fx/DamageNumbersFX.mjs';
 
 export default class GameScene {
     display;
@@ -28,7 +30,7 @@ export default class GameScene {
 
     constructor() {
         this.display = new Container();
-        app.three.scene.background = new Color(app.data.COLORS.background);
+        app.three.scene.background = new Color(0xFFFFFF);
 
         this.initLights();
         this.initMaterials();
@@ -44,6 +46,8 @@ export default class GameScene {
 
         this.initOrthoCamera();
         this.initJoystickController();
+
+        // this.initOrbitControls()
 
         app.resize.add(this.onResize);
         app.loop.add(this.onUpdate);
@@ -75,7 +79,7 @@ export default class GameScene {
         app.three.scene.add(lightAmbient);
 
         let lightDirectional = new DirectionalLight(0xffffff, 3.1);
-        lightDirectional.position.set(-10, 15, -10);
+        lightDirectional.position.set(-5, 35, -2);
         lightDirectional.castShadow = true;
 
         lightDirectional.shadow.camera.left = -14;
@@ -89,10 +93,18 @@ export default class GameScene {
         app.three.scene.add(lightDirectional);
     }
 
+    initOrbitControls() {
+        this.controls = new OrbitControls(app.three.camera, app.pixi.app.view);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.1;
+        this.controls.update();
+    }
+
     initMaterials() {
         app.three.materials = {
             floor: new MeshPhongMaterial({ map: app.three.getMap('wood', true) }),
             jane: new MeshBasicMaterial({ map: app.three.getMap('janeTexture') }),
+            hen: new MeshLambertMaterial({map: app.three.getMap('henTexture') }),
         };
     }
 
@@ -122,7 +134,9 @@ export default class GameScene {
 
     init2DObjects() { }
 
-    initFXhelpers() { }
+    initFXhelpers() { 
+        this.damageFX = new DamageNumbersFX(app.fxLayer);
+    }
 
     initCharacters() {
         this.hero = new Hero();
@@ -163,7 +177,6 @@ export default class GameScene {
                 this.orthoCameraRig.setZoom(55)
                 this.orthoCameraRig.setAnchorZ(7.5);
                 this.orthoCameraRig.setClamp('z', 0, 4.5);
-
                 this.playerJoystick.display.scale.set(0.9)
 
                 break;
@@ -171,7 +184,6 @@ export default class GameScene {
 
             default: {
                 // Default phones / desktop
-
                 this.orthoCameraRig.setZoom(53)
                 this.orthoCameraRig.setAnchorZ(8);
                 this.orthoCameraRig.setClamp('z', 0, 5);

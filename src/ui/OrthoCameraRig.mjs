@@ -98,7 +98,6 @@ export default class OrthoCameraRig {
 
     applyPreset(mode) {
         this.mode = mode;
-        // zoom only; clamps/locks/follow задаёшь отдельно
         switch (mode) {
             case 'TABLET': {
                 this.setZoom(52);

@@ -8,9 +8,6 @@ export default class Walls {
     thickness = 0.6;
     yOffset = 0.01;
 
-    /**
-     * bounds: { minX, maxX, minZ, maxZ }
-     */
     constructor(parentGroup, {
         bounds,
         show = true,
@@ -50,7 +47,7 @@ export default class Walls {
             show
         });
 
-        // TOP (север, верх картинки)
+        // TOP 
         this.createWall({
             x: (minX + maxX) * 0.5,
             z: minZ,
@@ -59,7 +56,7 @@ export default class Walls {
             show
         });
 
-        // BOTTOM (юг, низ картинки)
+        // BOTTOM 
         this.createWall({
             x: (minX + maxX) * 0.5,
             z: maxZ,
@@ -70,16 +67,17 @@ export default class Walls {
     }
 
     createWall({ x, z, width, depth, show }) {
-        let shape = new RectangleShape(width, depth, 0);
-        app.phys.addStaticBody({ x, y: 0, z }, shape, this.display, false);
+    let shape = new RectangleShape(width, depth, 0);
+    let wallBody = app.phys.addStaticBody({ x, y: 0, z }, shape, this.display, false);
+    wallBody.isWall = true; // important marker for projectile collision
 
-        if (show) {
-            let plane = new Mesh(new PlaneGeometry(width, depth), this.material);
-            plane.rotation.x = -Math.PI / 2;
-            plane.position.set(x, this.yOffset, z);
-            this.display.add(plane);
-        }
+    if (show) {
+        let plane = new Mesh(new PlaneGeometry(width, depth), this.material);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.set(x, this.yOffset, z);
+        this.display.add(plane);
     }
+}
 
     setVisible(isVisible) {
         this.display.visible = !!isVisible;

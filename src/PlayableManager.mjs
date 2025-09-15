@@ -5,6 +5,11 @@ import CinematicManager from './gameManagers/CinematicManager.mjs';
 import { Hand } from './tutor/Hand.mjs';
 import TutorController from './tutor/TutorController.mjs';
 import PackShot from './scenes/PackShot.mjs';
+import WaveManager from './gameManagers/WaveManager.mjs';
+import EnemyManager from './gameManagers/EnemyManager.mjs';
+import HeroAttackController from './gameManagers/HeroAttackController.mjs';
+import HeroHealthController from './gameManagers/HeroHealthController.mjs';
+import EnemyAttackController from './gameManagers/EnemyAttackController.mjs';
 
 
 export default class PlayableManager {
@@ -16,7 +21,7 @@ export default class PlayableManager {
         this.initManagers();
         this.initTutor();
         this.initEvents();
-        
+
         this.startMusic();
     }
 
@@ -33,10 +38,31 @@ export default class PlayableManager {
     //                     MANAGERS                   
     // -----------------------------------------------------//
 
+    // initManagers() {
+    //     this.gameController = new GameController(this.scene);
+    //     this.cinematicManager = new CinematicManager(this.scene);
+    //     this.waveManager = new WaveManager(this.scene);
+    //     this.enemyManager = new EnemyManager(this.scene);
+    //     this.heroAttack = new HeroAttackController(this.scene.hero, this.scene.worldRoot);
+    // }
+
     initManagers() {
-        this.gameController = new GameController(this.scene);
-        this.cinematicManager = new CinematicManager(this.scene);
-    }
+    this.gameController = new GameController(this.scene);
+    this.cinematicManager = new CinematicManager(this.scene);
+    this.waveManager = new WaveManager(this.scene);
+    this.enemyManager = new EnemyManager(this.scene);
+
+    // hero attack (уже было)
+    this.heroAttack = new HeroAttackController(this.scene.hero, this.scene.worldRoot);
+
+    // NEW: enemy ranged attacks
+    this.enemyAttack = new EnemyAttackController(this.scene);
+
+    // NEW: hero health
+    this.heroHealth = new HeroHealthController(this.scene.hero);
+    // удобно, чтобы враги могли дернуть контактный урон:
+    this.scene.heroHealth = this.heroHealth;
+}
 
     // ----------------------------------------------------//
     //                    TUTOR
