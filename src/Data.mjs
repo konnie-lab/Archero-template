@@ -43,14 +43,10 @@ export default class Data {
         hero: { hp: 300, dmg: 190, moveSpeed: 6 },
 
         enemy: {
-            archer: { hp: 300, contactDmg: 50, arrowDmg: 60, roamTime: 2 },
-            melee: { hp: 400, contactDmg: 50, chargeCd: 3, telTime: 0.7, lungeSpeed: 10 },
+            archer: { hp: 300, contactDmg: 50, arrowDmg: 60, roamTime: 2 , moveSpeed: 1.8 },
+            melee: { hp: 400, contactDmg: 50, chargeCd: 3, telTime: 0.7, lungeSpeed: 10, moveSpeed: 2.2 },
         },
-
         enemyModels: { archer: 'hen', melee: 'hen', fallback: 'hen' },
-
-        // Manual spawn points per enemy (x,z within your arena bounds)
-        // y is optional; default 0
         waves: {
             1: {
                 enemies: [
@@ -69,13 +65,14 @@ export default class Data {
             },
         },
 
-        boostsWave1: ['multishot', 'fire_arrow', 'ricochet'],
-        boostsWave2: ['thunder_hammer', 'meteor', 'shuriken'],
+        boostsWave1: ['multishot', 'fire', 'ricochet'],
+        boostsWave2: ['hammer', 'meteor', 'shuriken'],
 
         boostsTimeoutHintSec: 5,
-        boostsAutoPickSec: 15,
-        boostsAutoPickKey: 'multishot',
+        boostsAutoPickSec: 150,
+        boostsAutoPickKey: 'fire',
 
-        lootAttractDelaySec: 1,
+        lootAttractDelaySec: 0.5,
+        delayBeforeShowFail: 1,
     };
 }

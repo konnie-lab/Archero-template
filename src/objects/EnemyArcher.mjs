@@ -3,9 +3,9 @@ import EnemyBase from './EnemyBase.mjs';
 export default class EnemyArcher extends EnemyBase {
   type = 'archer';
 
-  roamDurationSec = app.data.GAME_CONFIG.enemy.archer.roamTime; // 2
+  roamDurationSec = app.data.GAME_CONFIG.enemy.archer.roamTime ?? 2; // 2
   roamTimer = 0;
-  moveSpeed = 2.2;
+  moveSpeed = app.data.GAME_CONFIG.enemy.archer.moveSpeed ?? 2;
   shotFiredInCycle = false;
 
   constructor(scene, spawnPosition) {

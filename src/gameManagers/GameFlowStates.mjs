@@ -53,11 +53,17 @@ export class WaveState extends State {
 }
 
 // ShowBoosts — shows UI, fires hint (5s) and autoselect (15s)
+
 export class ShowBoostsState extends State {
     controller;
     waveNumber = 1;
+
+    // timers
+    delayTimerId = null;
     hintTimerId = null;
     autoTimerId = null;
+
+    delayBeforeShowSec = 2.0; // ← нужная задержка
 
     constructor(controller) {
         super();
@@ -66,31 +72,39 @@ export class ShowBoostsState extends State {
 
     enter(params) {
         this.waveNumber = (params && params.wave) || 1;
-        this.controller.showBoostsFor(this.waveNumber);
 
-        let config = app.data.GAME_CONFIG;
-
+        // чистим всё на всякий
         this.clearTimers();
-        this.hintTimerId = window.setTimeout(() => {
-            app.eventEmitter.emit(app.data.EVENTS.BOOST_TIMEOUT_HINT);
-        }, config.boostsTimeoutHintSec * 1000);
 
-        this.autoTimerId = window.setTimeout(() => {
-            app.eventEmitter.emit(
-                app.data.EVENTS.BOOST_AUTOSELECT,
-                { key: config.boostsAutoPickKey }
-            );
-        }, config.boostsAutoPickSec * 1000);
+        // задержка перед показом UI
+        this.delayTimerId = window.setTimeout(() => {
+            this.delayTimerId = null;
+
+            this.controller.showBoostsFor(this.waveNumber);
+
+            let config = app.data.GAME_CONFIG;
+
+            this.hintTimerId = window.setTimeout(() => {
+                app.eventEmitter.emit(app.data.EVENTS.BOOST_TIMEOUT_HINT);
+            }, (config.boostsTimeoutHintSec || 5) * 1000);
+
+            this.autoTimerId = window.setTimeout(() => {
+                app.eventEmitter.emit(
+                    app.data.EVENTS.BOOST_AUTOSELECT,
+                    { key: config.boostsAutoPickKey }
+                );
+            }, (config.boostsAutoPickSec || 15) * 1000);
+
+        }, this.delayBeforeShowSec * 1000);
     }
 
     update() { }
     exit() { this.clearTimers(); }
 
     clearTimers() {
-        if (this.hintTimerId) window.clearTimeout(this.hintTimerId);
-        if (this.autoTimerId) window.clearTimeout(this.autoTimerId);
-        this.hintTimerId = null;
-        this.autoTimerId = null;
+        if (this.delayTimerId) { window.clearTimeout(this.delayTimerId); this.delayTimerId = null; }
+        if (this.hintTimerId) { window.clearTimeout(this.hintTimerId); this.hintTimerId = null; }
+        if (this.autoTimerId) { window.clearTimeout(this.autoTimerId); this.autoTimerId = null; }
     }
 }
 

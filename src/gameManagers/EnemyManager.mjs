@@ -19,8 +19,18 @@ export default class EnemyManager {
     app.eventEmitter.on(app.data.EVENTS.ENEMY_KILLED, this.onEnemyKilled);
     app.eventEmitter.on(app.data.EVENTS.WAVE_CLEARED, this.onWaveCleared);
 
-    app.eventEmitter.on(app.data.EVENTS.GAMEPLAY_PAUSE, () => { this.gameplayPaused = true; });
+    app.eventEmitter.on(app.data.EVENTS.GAMEPLAY_PAUSE, () => this.pauseAll());
     app.eventEmitter.on(app.data.EVENTS.GAMEPLAY_RESUME, () => this.activateAll());
+  }
+
+  pauseAll() {
+    this.gameplayPaused = true;
+    for (let enemy of this.enemies) if (!enemy.isDead) enemy.stop();
+  }
+
+  activateAll() {
+    this.gameplayPaused = false;
+    for (let enemy of this.enemies) if (!enemy.isDead) enemy.start();
   }
 
   onSpawnEnemy = ({ type, position, active = true }) => {
@@ -56,7 +66,7 @@ export default class EnemyManager {
     let hero = this.scene.hero?.model;
     if (!hero) return;
 
-    let lootAttractDelaySec = app.data.GAME_CONFIG?.lootAttractDelaySec ?? 1; 
+    let lootAttractDelaySec = app.data.GAME_CONFIG?.lootAttractDelaySec ?? 1;
     gsap.delayedCall(lootAttractDelaySec, () => {
       for (let loot of this.lootItems) loot.beginAttract(hero);
     });

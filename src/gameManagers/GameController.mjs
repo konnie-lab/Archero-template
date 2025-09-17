@@ -17,7 +17,6 @@ export default class GameController {
     app.eventEmitter.on(app.data.EVENTS.WAVE_CLEARED, this.onWaveCleared);
     app.eventEmitter.on(app.data.EVENTS.PLAYER_DIED, this.onPlayerDied);
     app.eventEmitter.on(app.data.EVENTS.BOOST_SELECTED, this.onBoostSelected);
-    app.eventEmitter.on(app.data.EVENTS.BOOST_AUTOSELECT, this.onBoostSelected);
   }
 
   bindFirstInput() {
@@ -43,12 +42,22 @@ export default class GameController {
   };
 
   onPlayerDied = () => {
-    this.scene?.playerJoystick?.setEnabled?.(false);
+
+    this.scene?.playerJoystick?.stop?.();
     this.scene?.hero?.setSpeed?.(0);
-    this.fsm.set(FailState);
+    app.eventEmitter.emit(app.data.EVENTS.GAMEPLAY_PAUSE);
+    app.eventEmitter.emit(app.data.EVENTS.HERO_CANNOT_ATTACK);
+
+    let delayBeforeShowFail = app.data.GAME_CONFIG?.delayBeforeShowFail ?? 1;
+    gsap.delayedCall(delayBeforeShowFail, () => {
+      this.scene?.failBanner?.show?.();
+    });
+
   };
 
   onBoostSelected = ({ key }) => {
+    this.scene?.heroAttack?.setAttackKey?.(key);
+
     if (this.currentWave === 1) {
       this.fsm.set(WaveState, { wave: 2 });
     } else {

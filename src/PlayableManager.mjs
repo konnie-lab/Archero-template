@@ -10,6 +10,8 @@ import EnemyManager from './gameManagers/EnemyManager.mjs';
 import HeroAttackController from './gameManagers/HeroAttackController.mjs';
 import HeroHealthController from './gameManagers/HeroHealthController.mjs';
 import EnemyAttackController from './gameManagers/EnemyAttackController.mjs';
+import BoostsUI from './ui/BoostsUI.mjs';
+import FailBanner from './ui/FailBanner.mjs';
 
 
 export default class PlayableManager {
@@ -20,6 +22,7 @@ export default class PlayableManager {
         this.initSoundService();
         this.initManagers();
         this.initTutor();
+        this.initUI();
         this.initEvents();
 
         this.startMusic();
@@ -38,31 +41,20 @@ export default class PlayableManager {
     //                     MANAGERS                   
     // -----------------------------------------------------//
 
-    // initManagers() {
-    //     this.gameController = new GameController(this.scene);
-    //     this.cinematicManager = new CinematicManager(this.scene);
-    //     this.waveManager = new WaveManager(this.scene);
-    //     this.enemyManager = new EnemyManager(this.scene);
-    //     this.heroAttack = new HeroAttackController(this.scene.hero, this.scene.worldRoot);
-    // }
 
     initManagers() {
-    this.gameController = new GameController(this.scene);
-    this.cinematicManager = new CinematicManager(this.scene);
-    this.waveManager = new WaveManager(this.scene);
-    this.enemyManager = new EnemyManager(this.scene);
+        this.gameController = new GameController(this.scene);
+        this.cinematicManager = new CinematicManager(this.scene);
+        this.waveManager = new WaveManager(this.scene);
+        this.enemyManager = new EnemyManager(this.scene);
 
-    // hero attack (уже было)
-    this.heroAttack = new HeroAttackController(this.scene.hero, this.scene.worldRoot);
+        this.heroAttack = new HeroAttackController(this.scene.hero, this.scene.worldRoot);
+        this.scene.heroAttack = this.heroAttack;
+        this.enemyAttack = new EnemyAttackController(this.scene);
 
-    // NEW: enemy ranged attacks
-    this.enemyAttack = new EnemyAttackController(this.scene);
-
-    // NEW: hero health
-    this.heroHealth = new HeroHealthController(this.scene.hero);
-    // удобно, чтобы враги могли дернуть контактный урон:
-    this.scene.heroHealth = this.heroHealth;
-}
+        this.heroHealth = new HeroHealthController(this.scene.hero);
+        this.scene.heroHealth = this.heroHealth;
+    }
 
     // ----------------------------------------------------//
     //                    TUTOR
@@ -84,6 +76,17 @@ export default class PlayableManager {
 
     onOpenStore() {
         app.openStore();
+        app.gameEnd();
+    }
+
+    // -----------------------------------------------------//
+    //                     UI                     
+    // -----------------------------------------------------//
+
+    initUI() {
+        this.boostsUI = new BoostsUI(app.overlayLayer);
+        this.failBanner = new FailBanner(app.overlayLayer, this.scene);
+        this.scene.failBanner = this.failBanner;
     }
 
     // -----------------------------------------------------//
@@ -101,4 +104,5 @@ export default class PlayableManager {
     stopMusic() {
         app.eventEmitter.emit(app.data.SOUND_EVENTS.STOP_MUSIC);
     }
+
 }

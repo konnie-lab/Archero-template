@@ -2,15 +2,29 @@
 import Projectile from '../objects/Projectile.mjs';
 
 let ATTACK_PRESETS = {
-    arrow_basic: {
-        cooldown: 0.75,
+    basic: {
+        cooldown: 0.1,
+        damageMul: 1.0,
         projectile: { textureKey: 'arrow_hero', speed: 32, hitRadius: 0.6 },
         trail: { enabled: true, life: 0.30, interval: 0.02 }
     },
-    fire_arrow: {
-        cooldown: 0.78,
-        projectile: { textureKey: 'arrow_flaming', speed: 32, hitRadius: 0.65 },
+    fire: {
+        cooldown: 0.75,
+        damageMul: 1.15, // +15%
+        projectile: { textureKey: 'arrow_fire', speed: 32, hitRadius: 0.6 },
         trail: { enabled: true, life: 0.35, interval: 0.018 }
+    },
+    ice: {
+        cooldown: 0.78,
+        damageMul: 1.10, // +10%
+        projectile: { textureKey: 'arrow_ice', speed: 31, hitRadius: 0.6 },
+        trail: { enabled: true, life: 0.32, interval: 0.02 }
+    },
+    poison: {
+        cooldown: 0.78,
+        damageMul: 1.12, // +12%
+        projectile: { textureKey: 'arrow_poison', speed: 31, hitRadius: 0.6 },
+        trail: { enabled: true, life: 0.33, interval: 0.02 }
     }
 };
 
@@ -32,7 +46,8 @@ export default class HeroAttackController {
 
     enemyTrack = new Map(); // for future development (enemy speeds)
 
-    attackTypeKey = 'arrow_basic';
+    // attackTypeKey = 'arrow_basic';
+    attackTypeKey = 'basic';
 
     constructor(hero, worldRoot) {
         this.hero = hero;
@@ -48,11 +63,11 @@ export default class HeroAttackController {
     }
 
     setAttackKey(key) {
-        this.attackTypeKey = ATTACK_PRESETS[key] ? key : 'arrow_basic';
+        this.attackTypeKey = ATTACK_PRESETS[key] ? key : 'basic';
     }
 
     getAttackPreset() {
-        return ATTACK_PRESETS[this.attackTypeKey] || ATTACK_PRESETS.arrow_basic;
+        return ATTACK_PRESETS[this.attackTypeKey] || ATTACK_PRESETS.basic;
     }
 
     onUpdate = () => {
@@ -134,36 +149,36 @@ export default class HeroAttackController {
         return nearestEnemy;
     }
 
+
     fireAt(targetEnemy) {
-        let startPosition = this.hero.model.position.clone();
-        startPosition.y += 1.4;
+    let startPosition = this.hero.model.position.clone();
+    startPosition.y += 1.4;
 
-        let damage = app.data.GAME_CONFIG.hero.dmg | 0;
+    let baseDamage = app.data.GAME_CONFIG.hero.dmg | 0;
+    let preset = this.getAttackPreset();
+    let finalDamage = Math.round(baseDamage * (preset.damageMul || 1.0));
 
-        let preset = this.getAttackPreset();
-        let projectilePreset = preset.projectile || {};
-        let trailPreset = preset.trail || {};
+    let projectilePreset = preset.projectile || {};
+    let trailPreset = preset.trail || {};
 
-        let projectileOptions = {
-            textureKey: projectilePreset.textureKey || 'arrow_hero'
-        };
-        if (projectilePreset.speed) projectileOptions.speed = projectilePreset.speed;
-        if (projectilePreset.hitRadius) projectileOptions.hitRadius = projectilePreset.hitRadius;
+    let projectileOptions = { textureKey: projectilePreset.textureKey || 'arrow_hero' };
+    if (projectilePreset.speed) projectileOptions.speed = projectilePreset.speed;
+    if (projectilePreset.hitRadius) projectileOptions.hitRadius = projectilePreset.hitRadius;
 
-        if (trailPreset.enabled === false) {
-            projectileOptions.trail = false;
-        } else {
-            if (trailPreset.life != null) projectileOptions.trailLife = trailPreset.life;
-            if (trailPreset.interval != null) projectileOptions.trailInterval = trailPreset.interval;
-            if (trailPreset.textureKey) projectileOptions.trailTextureKey = trailPreset.textureKey;
-            if (trailPreset.alpha != null) projectileOptions.trailAlpha = trailPreset.alpha;
-        }
-
-        new Projectile(this.worldRoot, startPosition, targetEnemy, damage, projectileOptions);
-
-        let cooldownSeconds = (preset.cooldown ?? this.attackCooldown);
-        this.timer = cooldownSeconds;
+    if (trailPreset.enabled === false) {
+        projectileOptions.trail = false;
+    } else {
+        if (trailPreset.life != null) projectileOptions.trailLife = trailPreset.life;
+        if (trailPreset.interval != null) projectileOptions.trailInterval = trailPreset.interval;
+        if (trailPreset.textureKey) projectileOptions.trailTextureKey = trailPreset.textureKey;
+        if (trailPreset.alpha != null) projectileOptions.trailAlpha = trailPreset.alpha;
     }
+
+    new Projectile(this.worldRoot, startPosition, targetEnemy, finalDamage, projectileOptions);
+
+    let cooldownSeconds = (preset.cooldown ?? 0.75);
+    this.timer = cooldownSeconds;
+}
 
     destroy() { app.loop.remove(this.onUpdate); }
 }

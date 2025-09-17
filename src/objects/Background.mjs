@@ -5,7 +5,7 @@ export class Background {
     constructor(textureKey) {
 
         this.map = app.three.getMap(textureKey, true);
-        this.geometry = new PlaneGeometry(20, 45);
+        this.geometry = new PlaneGeometry(30, 40);
 
         this.material = new MeshPhongMaterial({
             map : this.map,

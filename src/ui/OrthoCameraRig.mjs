@@ -96,24 +96,6 @@ export default class OrthoCameraRig {
         this.camera.updateProjectionMatrix();
     }
 
-    applyPreset(mode) {
-        this.mode = mode;
-        switch (mode) {
-            case 'TABLET': {
-                this.setZoom(52);
-                break;
-            }
-            case 'TALL': {
-                this.setZoom(55);
-                break;
-            }
-            default: {
-                this.setZoom(53);
-                break;
-            }
-        }
-    }
-
     /*────────────── Internals ─────────────*/
     handleResize = () => {
         let cam = this.camera;
@@ -122,12 +104,6 @@ export default class OrthoCameraRig {
         cam.top    =  app.height / 2;
         cam.bottom = -app.height / 2;
         cam.updateProjectionMatrix();
-
-        let mode = app.resize.ratioLess('SM')
-            ? 'TABLET'
-            : (app.resize.ratioName === RATIO_NAMES.XLG ? 'TALL' : 'DEFAULT');
-
-        this.applyPreset(mode);
     };
 
     update = () => {
@@ -139,16 +115,16 @@ export default class OrthoCameraRig {
             this.worldRoot.position.x = 0;
         } else if (this.followX) {
             let targetX = -target.position.x + this.anchorX;
-            this.worldRoot.position.x = this._mix(this.worldRoot.position.x, targetX, this.lerpX);
-            this._applyClamp('x');
+            this.worldRoot.position.x = this.mix(this.worldRoot.position.x, targetX, this.lerpX);
+            this.applyClamp('x');
         }
 
         if (this.lockY) {
             this.worldRoot.position.y = 0;
         } else if (this.followY) {
             let targetY = -target.position.y + this.anchorY;
-            this.worldRoot.position.y = this._mix(this.worldRoot.position.y, targetY, this.lerpY);
-            this._applyClamp('y');
+            this.worldRoot.position.y = this.mix(this.worldRoot.position.y, targetY, this.lerpY);
+            this.applyClamp('y');
         }
 
         // Z
@@ -156,12 +132,12 @@ export default class OrthoCameraRig {
             this.worldRoot.position.z = 0;
         } else if (this.followZ) {
             let targetZ = -target.position.z + this.anchorZ;
-            this.worldRoot.position.z = this._mix(this.worldRoot.position.z, targetZ, this.lerpZ);
-            this._applyClamp('z');
+            this.worldRoot.position.z = this.mix(this.worldRoot.position.z, targetZ, this.lerpZ);
+            this.applyClamp('z');
         }
     };
 
-    _applyClamp(axis) {
+    applyClamp(axis) {
         let v = this.worldRoot.position[axis];
         let pack = axis === 'x' ? this.clampX : axis === 'y' ? this.clampY : this.clampZ;
         if (!pack) return;
@@ -170,7 +146,7 @@ export default class OrthoCameraRig {
         this.worldRoot.position[axis] = v;
     }
 
-    _mix(current, target, lerpFactor) {
+    mix(current, target, lerpFactor) {
         if (!lerpFactor || lerpFactor <= 0) return target;      // instant
         if (lerpFactor >= 1) return target;                     // hard snap
         return current + (target - current) * lerpFactor;       // smooth

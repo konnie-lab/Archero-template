@@ -104,7 +104,7 @@ export default class GameScene {
         app.three.materials = {
             floor: new MeshPhongMaterial({ map: app.three.getMap('wood', true) }),
             jane: new MeshBasicMaterial({ map: app.three.getMap('janeTexture') }),
-            hen: new MeshLambertMaterial({map: app.three.getMap('henTexture') }),
+            hen: new MeshLambertMaterial({ map: app.three.getMap('henTexture') }),
         };
     }
 
@@ -118,8 +118,8 @@ export default class GameScene {
         let bounds = {
             minX: -5.5,  // left border
             maxX: 5.5,   // right border
-            minZ: -8.0,  // top border
-            maxZ: 12.3,  // bottom border
+            minZ: -8.6,  // top border
+            maxZ: 10.3,  // bottom border
         };
 
         this.walls = new Walls(this.worldRoot, {
@@ -134,7 +134,7 @@ export default class GameScene {
 
     init2DObjects() { }
 
-    initFXhelpers() { 
+    initFXhelpers() {
         this.damageFX = new DamageNumbersFX(app.fxLayer);
     }
 
@@ -165,29 +165,59 @@ export default class GameScene {
         switch (mode) {
             case 'TABLET': {
                 // 4:3, 16:10, etc.
-                this.orthoCameraRig.setZoom(52)
-                this.orthoCameraRig.setClamp('z', -1, 3.5);
-                this.orthoCameraRig.setAnchorZ(4.5);
-                this.playerJoystick.display.scale.set(0.7)
+                if (app.isPortrait) {
+                    this.orthoCameraRig.setZoom(40)
+                    this.orthoCameraRig.setAnchorZ(0);
+                    this.orthoCameraRig.setClamp('z', 1, 3.5);
+                    this.playerJoystick.display.scale.set(0.7)
+                    this.playerJoystick.setMode('home');
+                } else {
+                    this.orthoCameraRig.setZoom(34.5)
+                    this.orthoCameraRig.setAnchorZ(0);
+                    this.orthoCameraRig.setClamp('z', 1.5, 6);
+                    this.playerJoystick.display.scale.set(0.7)
+                    this.playerJoystick.setMode('dynamic');
+                }
                 break;
             }
 
             case 'TALL': {
                 // Very tall phones (e.g., iPhone 12/14 Pro Max)
-                this.orthoCameraRig.setZoom(55)
-                this.orthoCameraRig.setAnchorZ(7.5);
-                this.orthoCameraRig.setClamp('z', 0, 4.5);
-                this.playerJoystick.display.scale.set(0.9)
+                if (app.isPortrait) {
+                    this.orthoCameraRig.setZoom(52)
+                    this.orthoCameraRig.setAnchorZ(0);
+                    this.orthoCameraRig.setClamp('z', 1.1, 1.1);
+                    this.playerJoystick.display.scale.set(0.9)
+                    this.playerJoystick.setMode('home');
+                } else {
+                    this.orthoCameraRig.setZoom(47)
+                    this.orthoCameraRig.setAnchorZ(0);
+                    this.orthoCameraRig.setClamp('z', -1, 2);
+                    this.playerJoystick.display.scale.set(0.9)
+                    this.playerJoystick.setMode('dynamic');
+                }
 
                 break;
             }
 
             default: {
                 // Default phones / desktop
-                this.orthoCameraRig.setZoom(53)
-                this.orthoCameraRig.setAnchorZ(8);
-                this.orthoCameraRig.setClamp('z', 0, 5);
-                this.playerJoystick.display.scale.set(0.9)
+                if (app.isPortrait) {
+                    this.orthoCameraRig.setZoom(52)
+                    this.orthoCameraRig.setAnchorZ(0);
+                    this.orthoCameraRig.setClamp('z', 1, 4.5);
+
+                    this.playerJoystick.display.scale.set(0.9)
+                    this.playerJoystick.setMode('home');
+                } else {
+                    this.orthoCameraRig.setZoom(44)
+                    this.orthoCameraRig.setAnchorZ(0);
+                    this.orthoCameraRig.setClamp('z', -0.7, 5);
+
+                    this.playerJoystick.display.scale.set(0.9)
+                    this.playerJoystick.setMode('dynamic');
+
+                }
 
                 break;
             }

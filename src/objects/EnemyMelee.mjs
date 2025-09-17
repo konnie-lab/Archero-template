@@ -3,10 +3,10 @@ import EnemyBase from './EnemyBase.mjs';
 export default class EnemyMelee extends EnemyBase {
   type = 'melee';
 
-  moveSpeed = 3.2;
-  chargeCooldownSec = app.data.GAME_CONFIG.enemy.melee.chargeCd; // 3
-  telegraphTimeSec = app.data.GAME_CONFIG.enemy.melee.telTime;   // ~0.7
-  lungeSpeed = app.data.GAME_CONFIG.enemy.melee.lungeSpeed;      // 10
+  moveSpeed = app.data.GAME_CONFIG.enemy.melee.moveSpeed ?? 2.2;
+  chargeCooldownSec = app.data.GAME_CONFIG.enemy.melee.chargeCd; 
+  telegraphTimeSec = app.data.GAME_CONFIG.enemy.melee.telTime;   
+  lungeSpeed = app.data.GAME_CONFIG.enemy.melee.lungeSpeed;      
 
   state = 'chase'; // 'chase' | 'telegraph' | 'lunge' | 'cooldown'
   timer = 0;
