@@ -1,38 +1,48 @@
 // gameManagers/HeroAttackController.mjs
+import { Vector3 } from 'three-161';
 import Projectile from '../objects/Projectile.mjs';
 
 let ATTACK_PRESETS = {
+    // --- base preset ---
     basic: {
-        cooldown: 0.1,
-        damageMul: 1.0,
-        projectile: { textureKey: 'arrow_hero', speed: 32, hitRadius: 0.6 },
-        trail: { enabled: true, life: 0.30, interval: 0.02 }
-    },
-    fire: {
         cooldown: 0.75,
-        damageMul: 1.15, // +15%
+        damageMul: 1.0,
+        projectile: { textureKey: 'arrow_hero', speed: 32, hitRadius: 0.3 },
+        trail: { enabled: false, life: 0.30, interval: 0.02 }
+    },
+
+    multishot: {
+        // +10% damage, 3 arrows: center = homing, two side = straight ±30°
+        cooldown: 0.75,
+        damageMul: 1.10,
+        projectile: { textureKey: 'arrow_hero', speed: 32, hitRadius: 0.3 },
+        trail: { enabled: true, life: 0.30, interval: 0.02 },
+        meta: { type: 'multishot', sideAngleDeg: 15 }
+    },
+
+    fire: {
+        // +150% damage, burn DoT: 5 ticks, 1/sec; tickDamage = 20% of base damage
+        cooldown: 0.75,
+        damageMul: 1.50,
         projectile: { textureKey: 'arrow_fire', speed: 32, hitRadius: 0.6 },
-        trail: { enabled: true, life: 0.35, interval: 0.018 }
+        trail: { enabled: true, life: 0.35, interval: 0.018 },
+        meta: { type: 'burn', burn: { ticks: 5, intervalSec: 1.0, tickDamageMulOfBase: 0.20 } }
     },
-    ice: {
-        cooldown: 0.78,
-        damageMul: 1.10, // +10%
-        projectile: { textureKey: 'arrow_ice', speed: 31, hitRadius: 0.6 },
-        trail: { enabled: true, life: 0.32, interval: 0.02 }
+
+    ricochet: {
+        // hits up to 3 targets (including the first one), ricochets without losing damage
+        cooldown: 0.75,
+        damageMul: 1.00,
+        projectile: { textureKey: 'arrow_hero', speed: 32, hitRadius: 0.6 },
+        trail: { enabled: true, life: 0.30, interval: 0.02 },
+        meta: { type: 'ricochet', chainMaxTargets: 3, chainRadius: 12.0 }
     },
-    poison: {
-        cooldown: 0.78,
-        damageMul: 1.12, // +12%
-        projectile: { textureKey: 'arrow_poison', speed: 31, hitRadius: 0.6 },
-        trail: { enabled: true, life: 0.33, interval: 0.02 }
-    }
 };
 
 export default class HeroAttackController {
     hero;
     worldRoot;
 
-    // default in case of no preset
     attackCooldown = 0.75;
     timer = 0;
 
@@ -44,9 +54,8 @@ export default class HeroAttackController {
     settleTimer = 0;
     wasMoving = false;
 
-    enemyTrack = new Map(); // for future development (enemy speeds)
+    enemyTrack = new Map();
 
-    // attackTypeKey = 'arrow_basic';
     attackTypeKey = 'basic';
 
     constructor(hero, worldRoot) {
@@ -76,8 +85,8 @@ export default class HeroAttackController {
         this.updateEnemyVelocities();
 
         let deltaSeconds = 1 / 40;
-
         let isMoving = this.hero.speed > 0;
+
         if (isMoving) {
             this.wasMoving = true;
             this.settleTimer = this.settleDelaySeconds;
@@ -151,34 +160,116 @@ export default class HeroAttackController {
 
 
     fireAt(targetEnemy) {
-    let startPosition = this.hero.model.position.clone();
-    startPosition.y += 1.4;
+        let startPosition = this.hero.model.position.clone();
+        startPosition.y += 1.4;
 
-    let baseDamage = app.data.GAME_CONFIG.hero.dmg | 0;
-    let preset = this.getAttackPreset();
-    let finalDamage = Math.round(baseDamage * (preset.damageMul || 1.0));
+        let baseDamage = app.data.GAME_CONFIG.hero.dmg | 0;
+        let preset = this.getAttackPreset();
+        let finalDamage = Math.round(baseDamage * (preset.damageMul || 1.0));
 
-    let projectilePreset = preset.projectile || {};
-    let trailPreset = preset.trail || {};
+        let projectilePreset = preset.projectile || {};
+        let trailPreset = preset.trail || {};
 
-    let projectileOptions = { textureKey: projectilePreset.textureKey || 'arrow_hero' };
-    if (projectilePreset.speed) projectileOptions.speed = projectilePreset.speed;
-    if (projectilePreset.hitRadius) projectileOptions.hitRadius = projectilePreset.hitRadius;
+        let projectileOptions = { textureKey: projectilePreset.textureKey || 'arrow_hero' };
+        if (projectilePreset.speed) projectileOptions.speed = projectilePreset.speed;
+        if (projectilePreset.hitRadius) projectileOptions.hitRadius = projectilePreset.hitRadius;
 
-    if (trailPreset.enabled === false) {
-        projectileOptions.trail = false;
-    } else {
-        if (trailPreset.life != null) projectileOptions.trailLife = trailPreset.life;
-        if (trailPreset.interval != null) projectileOptions.trailInterval = trailPreset.interval;
-        if (trailPreset.textureKey) projectileOptions.trailTextureKey = trailPreset.textureKey;
-        if (trailPreset.alpha != null) projectileOptions.trailAlpha = trailPreset.alpha;
+        if (trailPreset.enabled === false) {
+            projectileOptions.trail = false;
+        } else {
+            if (trailPreset.life != null) projectileOptions.trailLife = trailPreset.life;
+            if (trailPreset.interval != null) projectileOptions.trailInterval = trailPreset.interval;
+            if (trailPreset.textureKey) projectileOptions.trailTextureKey = trailPreset.textureKey;
+            if (trailPreset.alpha != null) projectileOptions.trailAlpha = trailPreset.alpha;
+        }
+
+        let meta = preset.meta || {};
+
+        // MULTISHOT: 1 homing + 2 straight based on the central shot direction
+        if (meta.type === 'multishot') {
+            // 0) central homing
+            new Projectile(this.worldRoot, startPosition, targetEnemy, finalDamage, { ...projectileOptions });
+
+            // 1) compute base direction from start → target (XZ)
+            let baseDir = new Vector3(0, 0, 1);
+            if (targetEnemy?.model) {
+                baseDir.set(
+                    targetEnemy.model.position.x - startPosition.x,
+                    0,
+                    targetEnemy.model.position.z - startPosition.z
+                );
+                if (baseDir.lengthSq() > 1e-8) baseDir.normalize();
+            } else {
+                // fallback to hero facing
+                let yaw = this.hero.model.rotation.y;
+                baseDir.set(Math.sin(yaw), 0, Math.cos(yaw));
+            }
+
+            // 2) angle from config → preset → default
+            let angleDeg = app.data.GAME_CONFIG?.multishotAngleDeg != null
+                ? app.data.GAME_CONFIG.multishotAngleDeg
+                : (meta.sideAngleDeg != null ? meta.sideAngleDeg : 30);
+            let angleRad = angleDeg * Math.PI / 180;
+
+            let left = rotateDirXZ(baseDir.x, baseDir.z, +angleRad);
+            let right = rotateDirXZ(baseDir.x, baseDir.z, -angleRad);
+
+            // 3) two straight arrows, die on walls
+            new Projectile(this.worldRoot, startPosition, null, finalDamage, {
+                ...projectileOptions,
+                fixedDirection: { x: left.x, y: 0, z: left.z },
+                dieOnWall: true
+            });
+            new Projectile(this.worldRoot, startPosition, null, finalDamage, {
+                ...projectileOptions,
+                fixedDirection: { x: right.x, y: 0, z: right.z },
+                dieOnWall: true
+            });
+        }
+        // FIRE: apply burn on hit
+        else if (meta.type === 'burn') {
+            let burnTickDamage = Math.round((meta.burn?.tickDamageMulOfBase || 0.2) * baseDamage);
+            let burnTicks = Math.max(1, meta.burn?.ticks || 5);
+            let burnIntervalSec = meta.burn?.intervalSec || 1.0;
+
+            new Projectile(this.worldRoot, startPosition, targetEnemy, finalDamage, {
+                ...projectileOptions,
+                onHitEffects: {
+                    burn: { tickDamage: burnTickDamage, ticks: burnTicks, intervalSec: burnIntervalSec }
+                }
+            });
+        }
+        // RICOCHET: chain
+        else if (meta.type === 'ricochet') {
+            new Projectile(this.worldRoot, startPosition, targetEnemy, finalDamage, {
+                ...projectileOptions,
+                ricochet: {
+                    enabled: true,
+                    chainMaxTargets: Math.max(1, meta.chainMaxTargets || 3),
+                    chainRadius: meta.chainRadius || 12.0
+                }
+            });
+        }
+        // default
+        else {
+            new Projectile(this.worldRoot, startPosition, targetEnemy, finalDamage, { ...projectileOptions });
+        }
+
+        let cooldownSeconds = (preset.cooldown ?? 0.75);
+        this.timer = cooldownSeconds;
     }
-
-    new Projectile(this.worldRoot, startPosition, targetEnemy, finalDamage, projectileOptions);
-
-    let cooldownSeconds = (preset.cooldown ?? 0.75);
-    this.timer = cooldownSeconds;
-}
 
     destroy() { app.loop.remove(this.onUpdate); }
 }
+
+// --- helpers ---
+function rotateDirXZ(x, z, angleRad) {
+    // rotate vector (x,z) by angle around Y
+    let cosA = Math.cos(angleRad);
+    let sinA = Math.sin(angleRad);
+    let nx = x * cosA - z * sinA;
+    let nz = x * sinA + z * cosA;
+    return { x: nx, z: nz };
+}
+
+

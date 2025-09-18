@@ -1,5 +1,4 @@
-// objects/EnemyBase.mjs
-import { Group } from 'three-161';
+import { Group, Mesh } from 'three-161';
 import * as SkeletonUtils from '../modules/SkeletonUtils.mjs';
 import { CircleShape, VerletBody } from '../modules/physics/VerletPhysics.mjs';
 
@@ -15,7 +14,7 @@ export default class EnemyBase {
   isDead = false;
   moveSpeed = 2.5;
 
-  activeDots = []; // { type:'burn', kill:Function }
+  activeDots = [];   // list of { type:'burn', kill:Function }
 
   constructor(scene, spawnPosition) {
     this.scene = scene;
@@ -37,20 +36,17 @@ export default class EnemyBase {
     this.skinnedObject = SkeletonUtils.clone(sourceScene);
     this.skinnedObject.scale.multiplyScalar(3.5);
 
-    // IMPORTANT: clone material per mesh 
-    let baseMaterial = app.three.materials.hen;
-    this.skinnedObject.traverse(node => {
-      if (!node.isSkinnedMesh) return;
 
-      let material = baseMaterial ? baseMaterial.clone() : (node.material?.clone ? node.material.clone() : node.material);
-      if (material) {
-        if (baseMaterial?.map) material.map = baseMaterial.map;
-        if (material.skinning !== true) material.skinning = true;
-        material.needsUpdate = true;
-        node.material = material;
+    let material = app.three.materials.hen;
+    this.skinnedObject.traverse(node => {
+      if (node.isSkinnedMesh) {
+        if (material) {
+          node.material = material;
+          if (node.material && node.material.skinning !== true) node.material.skinning = true;
+        }
+        node.castShadow = true;
+        node.receiveShadow = true;
       }
-      node.castShadow = true;
-      node.receiveShadow = true;
     });
 
     let position = spawnPosition || {};
@@ -73,6 +69,7 @@ export default class EnemyBase {
   onCollide = (otherBody) => {
     if (otherBody?.player && this.scene?.heroHealth) {
       this.scene.heroHealth.tryContactDamage(50);
+      console.log('damage')
     }
   };
 
@@ -95,7 +92,7 @@ export default class EnemyBase {
     let doTick = () => {
       if (killed || this.isDead) return;
 
-      this.flashRed();
+      this.flashRed(); // visual feedback for burn tick
       this.applyDamage(tickDamage);
 
       app.eventEmitter.emit(app.data.EVENTS.SHOW_DAMAGE_NUMBER, {
@@ -124,8 +121,7 @@ export default class EnemyBase {
     this.activeDots.push({ type: 'burn', kill: stopTimers });
   }
 
-  // emissive flash per mesh (materials are unique now)
-  flashRed() {
+    flashRed() {
     if (!this.skinnedObject) return;
 
     this.skinnedObject.traverse(node => {
@@ -142,7 +138,7 @@ export default class EnemyBase {
       }
 
       let base = meshMaterial.userData.flashBase;
-      if (meshMaterial.emissive?.setRGB) meshMaterial.emissive.setRGB(0.7, 0, 0);
+      if (meshMaterial.emissive?.setRGB) meshMaterial.emissive.setRGB(0.3, 0, 0);
 
       gsap.to(meshMaterial, {
         emissiveIntensity: (base.intensity || 1) * 2.4,
@@ -162,9 +158,11 @@ export default class EnemyBase {
     if (this.isDead) return;
     this.isDead = true;
 
+    // stop updates and physics
     this.stop();
     if (this.body) { app.phys.removeBody(this.body); this.body = null; }
 
+    // clear DoTs timers
     for (let item of this.activeDots) item?.kill?.();
     this.activeDots.length = 0;
 

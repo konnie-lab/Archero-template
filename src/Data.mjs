@@ -69,8 +69,8 @@ export default class Data {
         boostsWave2: ['hammer', 'meteor', 'shuriken'],
 
         boostsTimeoutHintSec: 5,
-        boostsAutoPickSec: 150,
-        boostsAutoPickKey: 'fire',
+        boostsAutoPickSec: 15,
+        boostsAutoPickKey: 'multishot',
 
         lootAttractDelaySec: 0.5,
         delayBeforeShowFail: 1,
