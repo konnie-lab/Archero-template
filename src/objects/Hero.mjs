@@ -22,27 +22,24 @@ export default class Hero {
 
     initModel() {
         this.model = new Group();
-        this.model.name = "Jane";
+        this.model.name = "Archer";
 
         let heroObject = app.three.getObject(this.model.name);
         heroObject.scale.multiplyScalar(1);
-        heroObject.getObjectByName('JaneBody').castShadow = true;
-        heroObject.getObjectByName('JaneBody').material = app.three.materials.jane;
+        heroObject.getObjectByName('ArcherBody').castShadow = true;
+        heroObject.getObjectByName('ArcherBody').material = app.three.materials.archer;
+        console.log (heroObject.getObjectByName('ArcherBody'))
         this.model.add(heroObject);
 
-        if (app.three.materials?.jane) {
+        if (app.three.materials?.archer) {
             heroObject.traverse((node) => {
                 if (node instanceof Mesh) {
-                    node.material = app.three.materials.jane;
+                    node.material = app.three.materials.archer;
                 }
             });
         }
 
-        let animations =
-            (app.assets.models.jane && app.assets.models.jane.animations) ||
-            (app.assets.models.Jane && app.assets.models.Jane.animations) ||
-            (app.assets.models.hero && app.assets.models.hero.animations) ||
-            [];
+        let animations = (app.assets.models.archer && app.assets.models.archer.animations) ||  [];
 
         let animationSpeed = 1 / 30;
         this.anim = new THREEAnimationManager(heroObject, animations, animationSpeed);

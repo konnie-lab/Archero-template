@@ -105,6 +105,7 @@ export default class GameScene {
             floor: new MeshPhongMaterial({ map: app.three.getMap('wood', true) }),
             jane: new MeshBasicMaterial({ map: app.three.getMap('janeTexture') }),
             hen: new MeshLambertMaterial({ map: app.three.getMap('henTexture') }),
+            archer: new MeshLambertMaterial({ map: app.three.getMap('archerTexture') }),
         };
     }
 

@@ -72,7 +72,7 @@ export default class Data {
         boostsAutoPickSec: 15,
         boostsAutoPickKey: 'multishot',
 
-        lootAttractDelaySec: 0.5,
+        lootAttractDelaySec: 0.75,
         delayBeforeShowFail: 1,
     };
 }

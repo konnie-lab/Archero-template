@@ -47,10 +47,14 @@ export default class Main {
 
         app.fxLayer = app.pixi.container();
         app.stage.addChild(app.fxLayer);
+
+        app.UILayer = app.pixi.container();
+        app.stage.addChild(app.UILayer);
     }
 
     initLayerOrder() {
         app.stage.setChildIndex(app.fxLayer, app.stage.children.length - 1);
+        app.stage.setChildIndex(app.UILayer, app.stage.children.length - 1);
         app.stage.setChildIndex(app.overlayLayer, app.stage.children.length - 1);
         app.stage.setChildIndex(app.tutorLayer, app.stage.children.length - 1);
         app.stage.setChildIndex(app.packShotLayer, app.stage.children.length - 1);
@@ -60,9 +64,3 @@ export default class Main {
         app.stage.setChildIndex(this.#soundBtn.display, app.stage.children.length - 1);
     }
 }
-
-
-
-
-
-

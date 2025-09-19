@@ -8,15 +8,22 @@ export default class LootItem {
   attractSpeed = 10.0; 
   pickupDistance = 0.4;
 
-  // offset after spawn
+  // planar velocity from spawn "kick"
   initialVelocityX = 0;
   initialVelocityZ = 0;
   velocityDampingPerSecond = 4.5;
 
+  // --- spin only (no tilt) ---
+  angularVelocityZ = 0;            // rad/sec
+  angularDampingPerSecond = 3.0;   // how fast spin fades
+  approxRadiusMeters = 0.12;       // used to map v -> ω (ω ≈ v/r)
+
+  lifetimeSeconds = 0;
+
   constructor(scene, position) {
     this.scene = scene;
 
-    this.sprite = app.three.sprite('coin', { scale: 0.005 });
+    this.sprite = app.three.sprite('gem', { scale: 0.0045 });
     this.sprite.name = 'LootCoin';
     this.sprite.position.set(
       position.x || 0,
@@ -39,6 +46,11 @@ export default class LootItem {
     this.initialVelocityX = Math.cos(randomAngle) * initialSpeed;
     this.initialVelocityZ = Math.sin(randomAngle) * initialSpeed;
 
+    // set initial spin proportional to kick speed (ω ≈ v/r)
+    let planarSpeed = Math.hypot(this.initialVelocityX, this.initialVelocityZ);
+    let randomSign = Math.random() < 0.5 ? -1 : 1;
+    this.angularVelocityZ = (planarSpeed / Math.max(0.05, this.approxRadiusMeters)) * 0.6 * randomSign;
+
     this.scene.worldRoot.add(this.sprite);
   }
 
@@ -49,8 +61,12 @@ export default class LootItem {
     this.targetObject = targetObject3D;
     this.isAttracting = true;
 
+    // kill inertial drift for straight fly-in
     this.initialVelocityX = 0;
     this.initialVelocityZ = 0;
+
+    // optional: small spin boost when attraction starts
+    this.angularVelocityZ += 3.5 * (Math.random() < 0.5 ? -1 : 1);
   }
 
   onUpdate = () => {
@@ -76,18 +92,55 @@ export default class LootItem {
       this.sprite.position.z += directionZ * step;
 
       this.attractSpeed = Math.min(16.0, this.attractSpeed + 12.0 * deltaSeconds);
+
+      // light spin damping while flying in
+      this.applySpin(deltaSeconds);
       return;
     }
 
+    // inertial drift after spawn
     if (Math.abs(this.initialVelocityX) > 0.001 || Math.abs(this.initialVelocityZ) > 0.001) {
       this.sprite.position.x += this.initialVelocityX * deltaSeconds;
       this.sprite.position.z += this.initialVelocityZ * deltaSeconds;
 
+      // linear damping
       let damping = Math.max(0, 1 - this.velocityDampingPerSecond * deltaSeconds);
       this.initialVelocityX *= damping;
       this.initialVelocityZ *= damping;
+
+      // keep spin roughly matched to current speed (ω ≈ v/r)
+      let planarSpeed = Math.hypot(this.initialVelocityX, this.initialVelocityZ);
+      let targetOmega = planarSpeed / Math.max(0.05, this.approxRadiusMeters);
+      let spinSign = this.angularVelocityZ >= 0 ? 1 : -1;
+      let follow = 6.0; // response speed to velocity changes
+      this.angularVelocityZ += (targetOmega * spinSign - this.angularVelocityZ) * Math.min(1, follow * deltaSeconds);
+    } else {
+      // fade remaining spin when fully stopped
+      this.angularVelocityZ *= Math.max(0, 1 - this.angularDampingPerSecond * deltaSeconds);
+      if (Math.abs(this.angularVelocityZ) < 0.02) this.angularVelocityZ = 0;
     }
+
+    this.applySpin(deltaSeconds);
   };
+
+  // --- spin helper (works for SpriteMaterial or Object3D) ---
+  applySpin(deltaSeconds) {
+    if (!this.angularVelocityZ) return;
+
+    let rotationStep = this.angularVelocityZ * deltaSeconds;
+
+    if (this.sprite?.material && typeof this.sprite.material.rotation === 'number') {
+      // three.js SpriteMaterial has its own rotation
+      this.sprite.material.rotation += rotationStep;
+    } else {
+      // fallback for Plane/Mesh or custom sprite wrapper
+      this.sprite.rotation.z += rotationStep;
+    }
+
+    // generic damping
+    this.angularVelocityZ *= Math.max(0, 1 - this.angularDampingPerSecond * deltaSeconds);
+    if (Math.abs(this.angularVelocityZ) < 0.02) this.angularVelocityZ = 0;
+  }
 
   destroy() {
     this.stop();

@@ -12,6 +12,7 @@ import HeroHealthController from './gameManagers/HeroHealthController.mjs';
 import EnemyAttackController from './gameManagers/EnemyAttackController.mjs';
 import BoostsUI from './ui/BoostsUI.mjs';
 import FailBanner from './ui/FailBanner.mjs';
+import HpBarsController from './gameManagers/HpBarsController.mjs';
 
 
 export default class PlayableManager {
@@ -87,6 +88,8 @@ export default class PlayableManager {
         this.boostsUI = new BoostsUI(app.overlayLayer);
         this.failBanner = new FailBanner(app.overlayLayer, this.scene);
         this.scene.failBanner = this.failBanner;
+
+        this.hpBarsController = new HpBarsController(app.UILayer, this.scene);
     }
 
     // -----------------------------------------------------//
